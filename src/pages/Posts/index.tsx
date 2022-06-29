@@ -1,15 +1,25 @@
-import { Avatar, Button, Flex, HStack, Text, VStack } from "@chakra-ui/react";
+import { ArrowUpIcon } from "@chakra-ui/icons";
+import {
+	Avatar,
+	Button,
+	Flex,
+	HStack,
+	IconButton,
+	Text,
+	VStack,
+} from "@chakra-ui/react";
 import moment from "moment";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useInView } from "react-intersection-observer";
-import { useInfiniteQuery } from "react-query";
 import CreatePost from "../../CreatePost";
-import api from "../../helpers/api";
+import useGetPosts from "../../hooks/posts/useGetPosts";
+import useGetPostsStats from "../../hooks/posts/useGetPostStats";
 
 interface indexProps {}
 
 const Posts: React.FC<indexProps> = ({}) => {
 	const { ref, inView } = useInView();
+	const { ref: mainRef, inView: mainInView } = useInView();
 
 	const {
 		data,
@@ -19,16 +29,9 @@ const Posts: React.FC<indexProps> = ({}) => {
 		isFetchingNextPage,
 		fetchNextPage,
 		hasNextPage,
-	} = useInfiniteQuery(
-		"projects",
-		async ({ pageParam = 0 }) => {
-			const res = await api.get("post/get?cursor=" + pageParam);
-			return res.data;
-		},
-		{
-			getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
-		}
-	);
+	} = useGetPosts();
+
+	const { data: statData } = useGetPostsStats();
 
 	useEffect(() => {
 		if (inView && hasNextPage) {
@@ -37,8 +40,67 @@ const Posts: React.FC<indexProps> = ({}) => {
 	}, [inView]);
 
 	return (
-		<Flex w="100%" direction="column" justifyContent="center" p={10}>
-			<CreatePost refetch={refetch} />
+		<Flex
+			w="100%"
+			direction="column"
+			justifyContent="center"
+			alignItems="center"
+			p={10}
+		>
+			{!mainInView && (
+				<IconButton
+					onClick={() => {
+						window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+					}}
+					position={"fixed"}
+					right="25px"
+					bottom="25px"
+					bg="black"
+					color="white"
+					_hover={{ bg: "black" }}
+					_active={{ bg: "black" }}
+					aria-label="Call Segun"
+					size="lg"
+					icon={<ArrowUpIcon />}
+				/>
+			)}
+
+			<VStack w="500px" mb={10} ref={mainRef}>
+				<HStack w="full" spacing={5}>
+					<Flex
+						direction={"column"}
+						w="full"
+						bg="white"
+						shadow="sm"
+						p={5}
+						borderRadius="10px"
+					>
+						<Text fontWeight={"bold"} fontSize="xl">
+							Posts Today
+						</Text>
+						<Text w={"full"} align="right" fontSize="lg" fontWeight={"medium"}>
+							{statData?.todaysMoods}
+						</Text>
+					</Flex>
+					<Flex
+						direction={"column"}
+						w="full"
+						bg="white"
+						shadow="sm"
+						p={5}
+						borderRadius="10px"
+					>
+						<Text fontWeight={"bold"} fontSize="xl">
+							Total Posts
+						</Text>
+						<Text w={"full"} align="right" fontSize="lg" fontWeight={"medium"}>
+							{statData?.totalMoods}
+						</Text>
+					</Flex>
+				</HStack>
+
+				<CreatePost refetch={refetch} />
+			</VStack>
 
 			{data && (
 				<VStack spacing={3}>
@@ -94,8 +156,6 @@ const Posts: React.FC<indexProps> = ({}) => {
 					? "Load Newer"
 					: "Nothing more to load"}
 			</Button>
-
-			{/* {isLoading && <Text>Loading...</Text>} */}
 		</Flex>
 	);
 };
